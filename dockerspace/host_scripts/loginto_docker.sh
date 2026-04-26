@@ -5,7 +5,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/run_in_host.conf"
+DOCKERSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+source "$DOCKERSPACE_DIR/project.conf"
 
 if ! docker container inspect "$CONTAINER_NAME" &>/dev/null; then
     echo "Container '$CONTAINER_NAME' is not running."

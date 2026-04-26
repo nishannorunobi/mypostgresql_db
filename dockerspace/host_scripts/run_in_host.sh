@@ -8,8 +8,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOCKERSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-source "$SCRIPT_DIR/run_in_host.conf"
+source "$DOCKERSPACE_DIR/project.conf"
 
 PID_FILE="/tmp/expose_ports_${CONTAINER_NAME}.pids"
 

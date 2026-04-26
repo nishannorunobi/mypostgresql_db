@@ -92,9 +92,6 @@ psql -U "$PG_SUPERUSER" -h "$PG_HOST" -p "$PG_PORT" -d "$UMS_DB" \
     -f "$INIT_DIR/04_seed_data.sql" -q
 success "Seed data applied."
 
-# ── 6. Install pgweb ──────────────────────────────────────────────────────────
-"$SCRIPT_DIR/db_ui.sh" --install-only
-
 echo ""
 success "Database is ready!"
 echo ""

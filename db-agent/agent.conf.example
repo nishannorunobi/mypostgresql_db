@@ -1,0 +1,5 @@
+# DB Agent — Configuration
+# Copy to agent.conf and set your API key.
+# DB credentials are loaded from ../umsdb/.env automatically.
+
+ANTHROPIC_API_KEY=your-api-key-here

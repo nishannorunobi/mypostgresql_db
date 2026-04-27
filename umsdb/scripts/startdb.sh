@@ -48,6 +48,12 @@ if grep -qE "md5|scram-sha-256" "$PGDATA/pg_hba.conf" 2>/dev/null; then
         "$PGDATA/pg_hba.conf"
 fi
 
+# Allow connections from any Docker network (dev only)
+if ! grep -q "0.0.0.0/0" "$PGDATA/pg_hba.conf" 2>/dev/null; then
+    info "Adding pg_hba.conf entry for Docker network access..."
+    echo "host    all    all    0.0.0.0/0    trust" >> "$PGDATA/pg_hba.conf"
+fi
+
 if pg_isready -h "$PG_HOST" -p "$PG_PORT" -q 2>/dev/null; then
     warn "PostgreSQL is already running — skipping start."
 else

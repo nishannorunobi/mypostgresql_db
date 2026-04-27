@@ -1,0 +1,8 @@
+# Credentials
+agent.conf
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo

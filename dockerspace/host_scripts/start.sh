@@ -22,6 +22,13 @@ else
         -t "$FULL_IMAGE" "$DOCKERSPACE_DIR"
 fi
 
+# ── Shared network ────────────────────────────────────────────────────────────
+SHARED_NETWORK="ums-network"
+if ! docker network inspect "$SHARED_NETWORK" &>/dev/null; then
+    echo "Creating shared network $SHARED_NETWORK..."
+    docker network create "$SHARED_NETWORK"
+fi
+
 # ── Start container ───────────────────────────────────────────────────────────
 if [ "${FORCE_RECREATE_CONTAINER}" = true ]; then
     echo "Force recreate: removing existing container $CONTAINER_NAME..."
@@ -37,9 +44,15 @@ else
     docker run -d \
         --name "$CONTAINER_NAME" \
         --hostname "$CONTAINER_NAME" \
+        --network "$SHARED_NETWORK" \
         -v "$PROJECT_ROOT":"$CONTAINER_WORKDIR" \
         "$FULL_IMAGE" \
         tail -f /dev/null
+fi
+
+# Connect to shared network if not already (handles containers started before this change)
+if ! docker network inspect "$SHARED_NETWORK" --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw "$CONTAINER_NAME"; then
+    docker network connect "$SHARED_NETWORK" "$CONTAINER_NAME"
 fi
 
 echo "Container is ready."

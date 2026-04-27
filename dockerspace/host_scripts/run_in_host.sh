@@ -54,7 +54,7 @@ if ! docker container inspect "$CONTAINER_NAME" &>/dev/null; then
     exit 1
 fi
 
-CONTAINER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER_NAME")
+CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "$CONTAINER_NAME" | awk '{print $1}')
 if [ -z "$CONTAINER_IP" ]; then
     error "Could not get IP for container '$CONTAINER_NAME'."
     exit 1

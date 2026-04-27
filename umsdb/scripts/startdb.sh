@@ -52,7 +52,7 @@ if pg_isready -h "$PG_HOST" -p "$PG_PORT" -q 2>/dev/null; then
     warn "PostgreSQL is already running — skipping start."
 else
     info "Starting PostgreSQL..."
-    gosu postgres pg_ctl -D "$PGDATA" -l /tmp/postgres.log start -w -t 30 -o "-c listen_addresses='localhost'"
+    gosu postgres pg_ctl -D "$PGDATA" -l /tmp/postgres.log start -w -t 30 -o "-c listen_addresses='*'"
     pg_isready -h "$PG_HOST" -p "$PG_PORT" -q || {
         error "PostgreSQL did not start in time. Check /tmp/postgres.log"
         exit 1

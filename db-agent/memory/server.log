@@ -1,0 +1,11 @@
+INFO:     Started server process [1982]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8890 (Press CTRL+C to quit)
+INFO:     172.19.0.1:44856 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48020 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48030 - "POST /api/tasks HTTP/1.1" 200 OK
+INFO:     172.19.0.1:57712 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.19.0.1:57724 - "WebSocket /ws/chat" [accepted]
+INFO:     connection open
+INFO:     connection closed

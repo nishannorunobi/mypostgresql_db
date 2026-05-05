@@ -46,6 +46,8 @@ else
         --hostname "$CONTAINER_NAME" \
         --network "$SHARED_NETWORK" \
         -v "$PROJECT_ROOT":"$CONTAINER_WORKDIR" \
+        -p 8085:8085 \
+        -p 8890:8890 \
         "$FULL_IMAGE" \
         tail -f /dev/null
 fi

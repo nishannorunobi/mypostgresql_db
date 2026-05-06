@@ -44,16 +44,16 @@ _KNOWN_SCRIPTS = {
 }
 
 
-def _expose_port(host_port: int, container_port: int, label: str = "") -> dict:
-    """Tell docker-manager-agent to forward host_port → this container's container_port."""
+def _notify_host(event: str, data: dict) -> dict:
+    """Fire an event to docker-manager-agent so it can take the right host-side action."""
     payload = json.dumps({
-        "container":      _CONTAINER_NAME,
-        "container_port": container_port,
-        "host_port":      host_port,
-        "label":          label,
+        "source":    "db-agent",
+        "event":     event,
+        "container": _CONTAINER_NAME,
+        "data":      data,
     }).encode()
     req = urllib.request.Request(
-        f"{_DOCKER_MANAGER_URL}/api/port-forward",
+        f"{_DOCKER_MANAGER_URL}/api/agent-events",
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -217,6 +217,40 @@ TOOL_DEFINITIONS = [
                 "args":   {"type": "string", "description": "Arguments: e.g. 'start', 'stop', '--install-only'"}
             },
             "required": ["script"]
+        }
+    },
+    {
+        "name": "notify_host",
+        "description": (
+            "Send a telemetry event to the docker-manager-agent on the host. "
+            "Use this to report ANYTHING that happened inside the container — "
+            "success, failure, installation, configuration change, or general status update. "
+            "The host uses this information to take necessary actions and to maintain a complete "
+            "picture of what is running inside the container.\n\n"
+            "Standard event types:\n"
+            "  service_started  — data: {service, port, host_port, label}  → host opens port\n"
+            "  service_stopped  — data: {service, host_port}               → host closes tunnel\n"
+            "  install_error    — data: {error, command, hint}             → host tries to fix\n"
+            "  action_required  — data: {description, command_suggestion}  → host takes action\n"
+            "  task_complete    — data: {task, summary, result}            → logged as telemetry\n"
+            "  status_update    — data: {component, status, detail}        → logged as telemetry\n"
+            "  custom           — data: any key-value pairs\n\n"
+            "ALWAYS call this after: installing a package, starting/stopping a service, "
+            "completing a task, hitting an error that might need host-side help."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "event": {
+                    "type": "string",
+                    "description": "Event type: 'service_started', 'service_stopped', 'task_complete', or any custom string"
+                },
+                "data": {
+                    "type": "object",
+                    "description": "Event payload. For service_started include: service (name), port (container port), host_port (same unless different), label (display name)"
+                }
+            },
+            "required": ["event", "data"]
         }
     },
     {
@@ -435,16 +469,43 @@ def execute_tool(name: str, inp: dict) -> dict:
                 "args":    args or None,
                 "output":  output[-1500:] if output else "(no output)",
             }
-            # Auto-expose port on host when a service starts successfully
+            # Auto-notify host when a service starts successfully
             if success and args in ("", "start", None):
                 port_info = _SCRIPT_PORTS.get(script_name)
                 if port_info:
-                    result["port_forward"] = _expose_port(**port_info)
+                    result["host_event"] = _notify_host("service_started", {
+                        "service":   script_name,
+                        "port":      port_info["container_port"],
+                        "host_port": port_info["host_port"],
+                        "label":     port_info["label"],
+                    })
+            elif success and args == "stop":
+                port_info = _SCRIPT_PORTS.get(script_name)
+                if port_info:
+                    result["host_event"] = _notify_host("service_stopped", {
+                        "service":   script_name,
+                        "host_port": port_info["host_port"],
+                    })
+            elif not success:
+                # Auto-notify host on failure so it can take corrective action
+                result["host_event"] = _notify_host("install_error", {
+                    "script":  script_name,
+                    "args":    args or None,
+                    "error":   output[-500:],
+                    "hint":    f"Script {script_name} failed inside {_CONTAINER_NAME}. May need host-side fix.",
+                })
             return result
         except subprocess.TimeoutExpired:
             return {"success": False, "error": f"{script_name} timed out after 120s"}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    if name == "notify_host":
+        event = inp.get("event", "").strip()
+        data  = inp.get("data", {})
+        if not event:
+            return {"error": "event is required"}
+        return _notify_host(event, data)
 
     if name == "update_meta":
         MEMORY_DIR.mkdir(exist_ok=True)

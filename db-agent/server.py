@@ -36,6 +36,19 @@ PGDATA   = os.environ.get("PGDATA", "/var/lib/postgresql/data")
 
 _CHAT_LOG = MEMORY_DIR / "chat_history.log"
 
+# Active operational issues — polled by docker-manager-agent and forwarded to dashboard
+_issues: list[str] = []
+
+
+def _record_issue(msg: str):
+    clean = str(msg)
+    if clean not in _issues:
+        _issues.append(clean)
+
+
+def _clear_issues():
+    _issues.clear()
+
 app = FastAPI(title="DB Agent", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -59,6 +72,7 @@ def health():
         "status":           "ok",
         "agent":            "db-agent",
         "postgres_running": pg_up,
+        "issues":           list(_issues),
         "time":             datetime.now().isoformat(),
     }
 
@@ -154,8 +168,13 @@ async def handle_task(body: TaskRequest):
 
         return response
 
-    result = await loop.run_in_executor(None, _run)
-    return {"result": result or "(no response)"}
+    try:
+        result = await loop.run_in_executor(None, _run)
+        _clear_issues()
+        return {"result": result or "(no response)"}
+    except Exception as e:
+        _record_issue(f"Anthropic API error: {e}")
+        raise HTTPException(status_code=503, detail=f"AI agent error: {e}")
 
 
 # ── WebSocket chat ─────────────────────────────────────────────────────────────
@@ -254,6 +273,12 @@ async def ws_chat(ws: WebSocket):
                 continue
             history.append({"role": "user", "content": text})
             _append_chat("user", text)
-            history = await _chat_turn(ws, history, client)
+            try:
+                history = await _chat_turn(ws, history, client)
+                _clear_issues()
+            except Exception as e:
+                _record_issue(f"Anthropic API error: {e}")
+                await ws.send_json({"type": "error", "content": f"Agent error: {e}"})
+                await ws.send_json({"type": "done"})
     except WebSocketDisconnect:
         pass

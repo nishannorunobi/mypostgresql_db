@@ -1,5 +1,9 @@
-INFO:     Started server process [2131]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8890 (Press CTRL+C to quit)
-INFO:     172.19.0.1:34996 - "GET /health HTTP/1.1" 200 OK
+[33m[WARN][0m  PostgreSQL is not running — agent will start it on request.
+
+[1m╔══════════════════════════════════════════╗[0m
+[1m║   DB Agent                               ║[0m
+[1m╚══════════════════════════════════════════╝[0m
+  [32mAPI:[0m  http://localhost:8890
+  [32mLog:[0m  memory/server.log
+  Press Ctrl+C to stop.
+

@@ -31,8 +31,16 @@ sys.path.insert(0, str(AGENT_DIR))
 import agent as ai_agent
 from tools import TOOL_DEFINITIONS, execute_tool, MEMORY_DIR
 
-STARTDB  = AGENT_DIR.parent / "umsdb" / "scripts" / "startdb.sh"
-PGDATA   = os.environ.get("PGDATA", "/var/lib/postgresql/data")
+STARTDB          = AGENT_DIR.parent / "umsdb"    / "scripts" / "startdb.sh"
+MYDOCSDB_STARTDB = AGENT_DIR.parent / "mydocsdb" / "scripts" / "startdb.sh"
+PGDATA           = os.environ.get("PGDATA", "/var/lib/postgresql/data")
+DB_UI_SCRIPT     = AGENT_DIR.parent / "dockerspace" / "container_scripts" / "db_ui.sh"
+PGWEB_PID_FILE   = "/tmp/pgweb.pid"
+
+_INITDB_SCRIPTS = {
+    "umsdb":    STARTDB,
+    "mydocsdb": MYDOCSDB_STARTDB,
+}
 
 _CHAT_LOG = MEMORY_DIR / "chat_history.log"
 
@@ -62,6 +70,15 @@ def root():
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
+def _pgweb_running() -> bool:
+    try:
+        pid = int(Path(PGWEB_PID_FILE).read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
 @app.get("/health")
 def health():
     pg_up = subprocess.run(
@@ -72,6 +89,7 @@ def health():
         "status":           "ok",
         "agent":            "db-agent",
         "postgres_running": pg_up,
+        "pgweb_running":    _pgweb_running(),
         "issues":           list(_issues),
         "time":             datetime.now().isoformat(),
     }
@@ -107,6 +125,58 @@ def db_start():
         return {"success": False, "output": str(e)}
 
 
+@app.post("/api/initdb/{db_name}")
+def initdb(db_name: str):
+    script = _INITDB_SCRIPTS.get(db_name)
+    if not script:
+        raise HTTPException(status_code=404, detail=f"Unknown db: '{db_name}'. Known: {list(_INITDB_SCRIPTS)}")
+    if not script.exists():
+        raise HTTPException(status_code=500, detail=f"startdb.sh not found at {script}")
+    try:
+        r = subprocess.run(
+            ["bash", str(script), "--prepare-only"],
+            capture_output=True, text=True, timeout=60,
+        )
+        return {
+            "success": r.returncode == 0,
+            "output":  (r.stdout + r.stderr).strip()[-800:],
+        }
+    except subprocess.TimeoutExpired:
+        return {"success": False, "output": f"{db_name} startdb.sh timed out after 60s"}
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+
+@app.post("/api/dbui/start")
+def dbui_start():
+    if not DB_UI_SCRIPT.exists():
+        raise HTTPException(status_code=500, detail=f"db_ui.sh not found at {DB_UI_SCRIPT}")
+    try:
+        r = subprocess.run(
+            ["bash", str(DB_UI_SCRIPT), "start"],
+            capture_output=True, text=True, timeout=120,
+        )
+        return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()[-800:]}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "output": "db_ui.sh timed out"}
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+
+@app.post("/api/dbui/stop")
+def dbui_stop():
+    if not DB_UI_SCRIPT.exists():
+        raise HTTPException(status_code=500, detail=f"db_ui.sh not found at {DB_UI_SCRIPT}")
+    try:
+        r = subprocess.run(
+            ["bash", str(DB_UI_SCRIPT), "stop"],
+            capture_output=True, text=True, timeout=30,
+        )
+        return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+
 @app.post("/api/db/stop")
 def db_stop():
     try:
@@ -120,6 +190,31 @@ def db_stop():
         }
     except Exception as e:
         return {"success": False, "output": str(e)}
+
+
+# ── Service management ─────────────────────────────────────────────────────────
+
+@app.get("/api/services")
+def list_services():
+    from tools import _SERVICES_JSON
+    if not _SERVICES_JSON.exists():
+        return {"services": {}, "discovered": False}
+    data = json.loads(_SERVICES_JSON.read_text())
+    return {
+        "discovered":    True,
+        "discovered_at": data.get("discovered_at"),
+        "services":      data.get("services", {}),
+    }
+
+
+@app.post("/api/services/{project}/{service}/start")
+def service_start(project: str, service: str):
+    return execute_tool("run_service", {"service": f"{project}/{service}", "action": "start"})
+
+
+@app.post("/api/services/{project}/{service}/stop")
+def service_stop(project: str, service: str):
+    return execute_tool("run_service", {"service": f"{project}/{service}", "action": "stop"})
 
 
 # ── AI task endpoint (called by docker-manager-agent HTTP connector) ───────────

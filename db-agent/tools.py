@@ -13,9 +13,11 @@ from dotenv import load_dotenv
 STARTDB = Path(__file__).parent.parent / "umsdb" / "scripts" / "startdb.sh"
 PGDATA  = os.environ.get("PGDATA", "/var/lib/postgresql/data")
 
-AGENT_DIR  = Path(__file__).parent
-MEMORY_DIR = AGENT_DIR / "memory"
-ENV_FILE   = AGENT_DIR.parent / "umsdb" / ".env"
+AGENT_DIR      = Path(__file__).parent
+MEMORY_DIR     = AGENT_DIR / "memory"
+ENV_FILE       = AGENT_DIR.parent / "umsdb" / ".env"
+_WORKSPACE_ROOT = Path(__file__).parent.parent.parent.parent  # /myworkspace inside container
+_SERVICES_JSON  = MEMORY_DIR / "services.json"
 
 load_dotenv(ENV_FILE)
 
@@ -266,8 +268,114 @@ TOOL_DEFINITIONS = [
             },
             "required": ["meta"]
         }
+    },
+    {
+        "name": "discover_services",
+        "description": (
+            "Scan the mounted workspace and discover all runnable services across every project. "
+            "Looks in /myworkspace/projectspace/*/dockerspace/container_scripts/ for start/stop script pairs. "
+            "Saves the catalog to memory/services.json and returns the full list. "
+            "Run this on first session start, or whenever you need a fresh service list."
+        ),
+        "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "list_services",
+        "description": (
+            "Return the discovered service catalog from memory/services.json. "
+            "If the catalog does not exist yet, run discover_services first."
+        ),
+        "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "run_service",
+        "description": (
+            "Start or stop a discovered service by its catalog key (e.g. 'mypostgresql_db/db_ui', 'ums/admin_ui'). "
+            "Use list_services to see available keys. "
+            "action must be 'start' or 'stop'. "
+            "After starting a service, the host port is exposed automatically if a port is registered."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "service": {"type": "string", "description": "Service key from catalog, e.g. 'mypostgresql_db/db_ui'"},
+                "action":  {"type": "string", "description": "'start' or 'stop'"}
+            },
+            "required": ["service", "action"]
+        }
     }
 ]
+
+
+def _scan_services() -> dict:
+    """Walk projectspace/*/dockerspace/container_scripts/ and build a service catalog."""
+    services = {}
+    projectspace = _WORKSPACE_ROOT / "projectspace"
+    if not projectspace.exists():
+        return services
+
+    _skip = {"common", "connect", "reset_db", "build_env_ui"}
+
+    for scripts_dir in sorted(projectspace.glob("*/dockerspace/container_scripts")):
+        project = scripts_dir.parts[-3]
+
+        # Pair-based discovery: start.sh / start_X.sh
+        for start_script in sorted(scripts_dir.glob("start*.sh")):
+            stem = start_script.stem  # "start" or "start_admin_ui"
+            if stem == "start":
+                svc_name = "app"
+                stop_path  = scripts_dir / "stop.sh"
+                health_path = scripts_dir / "health.sh"
+            else:
+                svc_name = stem[len("start_"):]          # "admin_ui"
+                stop_path  = scripts_dir / f"stop_{svc_name}.sh"
+                health_path = scripts_dir / f"health_{svc_name}.sh"
+
+            key = f"{project}/{svc_name}"
+            services[key] = {
+                "key":          key,
+                "project":      project,
+                "name":         svc_name,
+                "container":    f"{project}-container",
+                "start_script": str(start_script),
+                "start_args":   "",
+                "stop_script":  str(stop_path) if stop_path.exists() else None,
+                "stop_args":    "",
+                "health_script": str(health_path) if health_path.exists() else None,
+                "port":         None,
+            }
+
+        # Single-script services that accept start/stop as arguments (e.g. db_ui.sh)
+        for script in sorted(scripts_dir.glob("*.sh")):
+            stem = script.stem
+            if (stem.startswith("start") or stem.startswith("stop")
+                    or stem.startswith("health") or stem in _skip):
+                continue
+            key = f"{project}/{stem}"
+            if key not in services:
+                services[key] = {
+                    "key":          key,
+                    "project":      project,
+                    "name":         stem,
+                    "container":    f"{project}-container",
+                    "start_script": str(script),
+                    "start_args":   "start",
+                    "stop_script":  str(script),
+                    "stop_args":    "stop",
+                    "health_script": None,
+                    "port":         None,
+                }
+
+    # Annotate known ports
+    _known_ports = {
+        "mypostgresql_db/db_ui": {"host_port": 8085, "container_port": 8085},
+        "ums/admin_ui":           {"host_port": 3000, "container_port": 3000},
+    }
+    for key, port_info in _known_ports.items():
+        if key in services:
+            services[key]["port"] = port_info
+
+    return services
 
 
 def _connect(role: str = "ums_user", database: str = None):
@@ -515,5 +623,80 @@ def execute_tool(name: str, inp: dict) -> dict:
         existing["last_updated"] = datetime.now().isoformat()
         meta_path.write_text(json.dumps(existing, indent=2))
         return {"saved": str(meta_path)}
+
+    if name == "discover_services":
+        MEMORY_DIR.mkdir(exist_ok=True)
+        services = _scan_services()
+        payload = {
+            "discovered_at": datetime.now().isoformat(),
+            "workspace_root": str(_WORKSPACE_ROOT),
+            "services": services,
+        }
+        _SERVICES_JSON.write_text(json.dumps(payload, indent=2))
+        return {
+            "found": len(services),
+            "services": list(services.keys()),
+            "saved": str(_SERVICES_JSON),
+        }
+
+    if name == "list_services":
+        if not _SERVICES_JSON.exists():
+            return {"error": "No service catalog found. Run discover_services first."}
+        data = json.loads(_SERVICES_JSON.read_text())
+        return {
+            "discovered_at": data.get("discovered_at"),
+            "services": {
+                k: {f: v[f] for f in ("project", "name", "container", "start_script", "stop_script", "port")}
+                for k, v in data.get("services", {}).items()
+            },
+        }
+
+    if name == "run_service":
+        service_key = inp.get("service", "").strip()
+        action      = inp.get("action", "").strip().lower()
+        if action not in ("start", "stop"):
+            return {"error": "action must be 'start' or 'stop'"}
+        if not _SERVICES_JSON.exists():
+            return {"error": "Service catalog not found. Run discover_services first."}
+        catalog  = json.loads(_SERVICES_JSON.read_text()).get("services", {})
+        if service_key not in catalog:
+            return {"error": f"Unknown service '{service_key}'. Available: {list(catalog.keys())}"}
+        svc = catalog[service_key]
+        script_path = svc["start_script"] if action == "start" else svc.get("stop_script")
+        script_args = svc["start_args"]   if action == "start" else svc.get("stop_args", "")
+        if not script_path:
+            return {"error": f"No {action} script defined for '{service_key}'"}
+        if not Path(script_path).exists():
+            return {"error": f"Script not found on disk: {script_path}"}
+        cmd = ["bash", script_path] + ([script_args] if script_args else [])
+        try:
+            r      = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            output = (r.stdout + r.stderr).strip()
+            result = {
+                "success": r.returncode == 0,
+                "service": service_key,
+                "action":  action,
+                "output":  output[-1500:] if output else "(no output)",
+            }
+            port_info = svc.get("port")
+            if r.returncode == 0 and port_info:
+                event = "service_started" if action == "start" else "service_stopped"
+                data  = {"service": service_key, "label": svc["name"]}
+                if action == "start":
+                    data.update({"port": port_info["container_port"], "host_port": port_info["host_port"]})
+                else:
+                    data["host_port"] = port_info["host_port"]
+                result["host_event"] = _notify_host(event, data)
+            elif not r.returncode == 0:
+                result["host_event"] = _notify_host("install_error", {
+                    "script": script_path,
+                    "error":  output[-500:],
+                    "hint":   f"{service_key} {action} failed inside {svc['container']}",
+                })
+            return result
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": f"{service_key} {action} timed out after 120s"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     return {"error": f"Unknown tool: {name}"}

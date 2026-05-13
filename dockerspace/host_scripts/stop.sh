@@ -9,6 +9,16 @@ source "$DOCKERSPACE_DIR/project.conf"
 
 FULL_IMAGE="$IMAGE_NAME:$IMAGE_VERSION"
 
+# ── Kill socat port forwarding (if active) ───────────────────────────────────
+PID_FILE="/tmp/expose_ports_${CONTAINER_NAME}.pids"
+if [ -f "$PID_FILE" ]; then
+    echo "Stopping port forwarding..."
+    while read -r pid port; do
+        kill "$pid" 2>/dev/null && echo "  Killed socat on port $port (PID $pid)." || true
+    done < "$PID_FILE"
+    rm -f "$PID_FILE"
+fi
+
 # ── Stop container ────────────────────────────────────────────────────────────
 if docker container inspect "$CONTAINER_NAME" &>/dev/null; then
     echo "Stopping container $CONTAINER_NAME..."

@@ -139,7 +139,7 @@ echo -e "${BOLD}║     UMS DB Browser — pgweb           ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════╝${RESET}"
 echo ""
 
-DB_URL="postgres://${UMS_USER}:${UMS_PASSWORD}@${PG_HOST}:${PG_PORT}/${UMS_DB}?sslmode=disable"
+DB_URL="postgres://${PG_SUPERUSER}@${PG_HOST}:${PG_PORT}/postgres?sslmode=disable"
 
 info "Starting pgweb on port $PGWEB_PORT..."
 nohup "$PGWEB_BIN" \

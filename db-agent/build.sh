@@ -15,7 +15,7 @@ error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
 # ── Install Python 3 if missing ───────────────────────────────────────────────
 if ! command -v python3 &>/dev/null; then
     info "Installing Python 3..."
-    apt-get update -qq && apt-get install -y python3 python3-pip python3-venv -qq
+    apt-get update -qq && apt-get install -y python3 python3-pip python3-venv
     success "Python 3 installed."
 else
     success "Python 3 found: $(python3 --version)"

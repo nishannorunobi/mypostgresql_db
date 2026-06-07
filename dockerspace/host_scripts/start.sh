@@ -6,6 +6,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKERSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$DOCKERSPACE_DIR/.." && pwd)"
+WORKSPACE_ROOT="$(cd "$PROJECT_ROOT/../.." && pwd)"
+PGDATA_DIR="$WORKSPACE_ROOT/mountspace/mypostgresql_db/pgdata"
 
 source "$DOCKERSPACE_DIR/project.conf"
 
@@ -41,12 +43,13 @@ if docker container inspect "$CONTAINER_NAME" &>/dev/null; then
     docker start "$CONTAINER_NAME"
 else
     echo "Creating container $CONTAINER_NAME..."
+    mkdir -p "$PGDATA_DIR"
     docker run -d \
         --name "$CONTAINER_NAME" \
         --hostname "$CONTAINER_NAME" \
         --network "$SHARED_NETWORK" \
         -v "$PROJECT_ROOT":"$CONTAINER_WORKDIR" \
-        -v "$PROJECT_ROOT/pgdata":/var/lib/postgresql/data \
+        -v "$PGDATA_DIR":/var/lib/postgresql/data \
         -p 8085:8085 \
         -p 8890:8890 \
         "$FULL_IMAGE" \

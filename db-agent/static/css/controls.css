@@ -1,0 +1,62 @@
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity .15s,filter .15s;white-space:nowrap}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:not(:disabled):hover{filter:brightness(1.1)}
+.btn-start{background:var(--green);color:#0d1117}
+.btn-stop{background:var(--red);color:#fff}
+.btn-init{background:var(--blue);color:#0d1117}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.btn-secondary:hover:not(:disabled){background:var(--bg4)}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px}
+.btn-ghost:hover:not(:disabled){background:var(--bg3);color:var(--text)}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-group{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ── Server card ── */
+.server-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px}
+.server-status-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.server-status-badge{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700}
+.server-status-badge.up{background:var(--green-dim);border:1px solid rgba(63,185,80,.3);color:var(--green)}
+.server-status-badge.down{background:var(--red-dim);border:1px solid rgba(248,81,73,.3);color:var(--red)}
+.server-status-badge.unknown{background:var(--bg3);border:1px solid var(--border);color:var(--text3)}
+.server-info-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.server-info-item{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 14px;min-width:130px}
+.server-info-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:3px}
+.server-info-value{font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono)}
+
+/* ── Schema cards ── */
+.schema-grid{display:flex;flex-direction:column;gap:12px}
+.schema-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s}
+.schema-card:hover{border-color:var(--bg5)}
+.schema-card-accent{width:4px;flex-shrink:0;border-radius:var(--radius) 0 0 var(--radius)}
+.schema-card-inner{display:flex;flex:1;align-items:stretch}
+.schema-card-body{padding:16px 20px;flex:1}
+.schema-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.schema-icon{font-size:20px;line-height:1}
+.schema-name{font-size:15px;font-weight:700;color:var(--text)}
+.schema-label{font-size:11px;color:var(--text3);margin-left:4px;font-weight:400}
+.schema-desc{font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.schema-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;margin-bottom:12px}
+.schema-status.yes{background:var(--green-dim);color:var(--green);border:1px solid rgba(63,185,80,.2)}
+.schema-status.no{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.2)}
+.schema-status.unknown{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.schema-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── pgweb / browser section ── */
+.browser-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px}
+.browser-status-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.browser-url{font-size:12px;color:var(--text2);font-family:var(--mono)}
+
+/* ── Health fields ── */
+.fields{display:flex;flex-direction:column;gap:5px}
+.field-row{display:flex;justify-content:space-between;align-items:center;background:var(--bg3);padding:7px 12px;border-radius:6px;font-size:12px}
+.field-key{color:var(--text2)}
+.field-val{font-weight:600;font-family:var(--mono)}
+.field-val.green{color:var(--green)}
+.field-val.red{color:var(--red)}
+.field-val.plain{color:var(--text)}
+
+/* ── Issues ── */
+.issues{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.issue-item{display:flex;align-items:flex-start;gap:6px;background:var(--red-dim);border:1px solid rgba(248,81,73,.25);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);line-height:1.4}
+.no-issues{font-size:12px;color:var(--green);display:flex;align-items:center;gap:6px}

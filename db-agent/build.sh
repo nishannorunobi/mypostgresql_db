@@ -34,6 +34,15 @@ info "Installing dependencies..."
 .venv/bin/pip install --quiet -r requirements.txt
 success "Dependencies installed."
 
+# ── Install rclone if missing ─────────────────────────────────────────────────
+if ! command -v rclone &>/dev/null; then
+    info "Installing rclone..."
+    curl -fsSL https://rclone.org/install.sh | bash
+    success "rclone installed: $(rclone --version | head -1)"
+else
+    success "rclone found: $(rclone --version | head -1)"
+fi
+
 # ── Create agent.conf if missing ──────────────────────────────────────────────
 if [ ! -f "agent.conf" ]; then
     cp agent.conf.example agent.conf

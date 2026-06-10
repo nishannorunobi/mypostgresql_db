@@ -5,6 +5,8 @@ class DBApp {
     this.server  = new ServerPanel(this.log);
     this.schemas = new SchemasPanel(this.log);
     this.browser = new BrowserPanel(this.log);
+    this.backup  = new BackupPanel(this.log);
+    this.cloud   = new CloudPanel(this.log);
     this.health  = new HealthPanel();
     this.chat    = new ChatPanel();
     window._app  = this;
@@ -19,8 +21,9 @@ class DBApp {
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.section === name);
     });
-    // Lazy-load schemas when tab opened
+    // Lazy-load on tab open
     if (name === 'schemas') this.schemas.load();
+    if (name === 'backup')  this.backup.load();
   }
 
   // ── Refresh ───────────────────────────────────────────────────────────────
@@ -31,6 +34,7 @@ class DBApp {
       this.health.updateBadges(h);
       this.server.render(h);
       this.browser.renderStatus(h);
+      this.cloud.renderStatus(h);
     } catch (_) {}
   }
 

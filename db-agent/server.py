@@ -67,10 +67,19 @@ MYDOCSDB_STARTDB = AGENT_DIR.parent / "mydocsdb" / "scripts" / "startdb.sh"
 PGDATA           = os.environ.get("PGDATA", "/var/lib/postgresql/data")
 DB_UI_SCRIPT     = AGENT_DIR.parent / "dockerspace" / "container_scripts" / "db_ui.sh"
 PGWEB_PID_FILE   = "/tmp/pgweb.pid"
+BACKUP_DIR       = AGENT_DIR / "backup_db"
+CLOUD_DIR        = AGENT_DIR / "sync_cloud_backup_db"
+BACKUPS_ROOT     = Path("/backups")
+GDRIVE_REMOTE    = "gdrive:myworkspace-backups"
 
 _INITDB_SCRIPTS = {
     "umsdb":    STARTDB,
     "mydocsdb": MYDOCSDB_STARTDB,
+}
+_CLEANDB_SCRIPTS = {
+    "umsdb":    AGENT_DIR.parent / "umsdb"    / "scripts" / "cleandb.sh",
+    "mydocsdb": AGENT_DIR.parent / "mydocsdb" / "scripts" / "cleandb.sh",
+    "all":      AGENT_DIR.parent / "scripts"  / "cleandb_all.sh",
 }
 
 # Metadata shown in the UI for each schema — add new entries here when new DBs are added
@@ -175,12 +184,13 @@ def health():
         capture_output=True
     ).returncode == 0
     return {
-        "status":           "ok",
-        "agent":            "db-agent",
-        "postgres_running": pg_up,
-        "pgweb_running":    _pgweb_running(),
-        "issues":           list(_issues),
-        "time":             datetime.now().isoformat(),
+        "status":            "ok",
+        "agent":             "db-agent",
+        "postgres_running":  pg_up,
+        "pgweb_running":     _pgweb_running(),
+        "rclone_ui_running": _rclone_ui_running(),
+        "issues":            list(_issues),
+        "time":              datetime.now().isoformat(),
     }
 
 
@@ -348,6 +358,20 @@ def stream_initdb(db_name: str):
     return _stream_script(["bash", str(script), "--prepare-only"])
 
 
+@app.post("/api/stream/cleandb/{db_name}")
+def stream_cleandb(db_name: str):
+    logger.info("Streaming: cleandb {}", db_name)
+    script = _CLEANDB_SCRIPTS.get(db_name)
+    if not script:
+        from fastapi.responses import StreamingResponse as _SR
+        def _err():
+            yield f"data: [ERROR] Unknown database: '{db_name}'\n\n"
+            yield "data: __done__\n\n"
+        return _SR(_err(), media_type="text/event-stream",
+                   headers={"Cache-Control": "no-cache"})
+    return _stream_script(["bash", str(script), "--yes"])
+
+
 @app.post("/api/stream/dbui/start")
 def stream_dbui_start():
     logger.info("Streaming: start pgweb")
@@ -383,6 +407,136 @@ def service_start(project: str, service: str):
 @app.post("/api/services/{project}/{service}/stop")
 def service_stop(project: str, service: str):
     return execute_tool("run_service", {"service": f"{project}/{service}", "action": "stop"})
+
+
+# ── Backup & restore ──────────────────────────────────────────────────────────
+
+_BACKUP_SCRIPTS = {
+    "ums":     BACKUP_DIR / "backup_ums.sh",
+    "mydocs":  BACKUP_DIR / "backup_mydocs.sh",
+    "wholedb": BACKUP_DIR / "backup_wholedb.sh",
+}
+_RESTORE_SCRIPTS = {
+    "ums":     BACKUP_DIR / "restore_ums.sh",
+    "mydocs":  BACKUP_DIR / "restore_mydocs.sh",
+    "wholedb": BACKUP_DIR / "restore_wholedb.sh",
+}
+
+
+@app.get("/api/backup/files/{db_name}")
+def backup_files(db_name: str):
+    folder = BACKUPS_ROOT / db_name
+    if not folder.exists():
+        return {"files": []}
+    files = sorted(
+        (f.name for f in folder.iterdir() if f.suffix in (".gz", ".sql")),
+        reverse=True,
+    )
+    return {"files": files}
+
+
+@app.post("/api/stream/backup/{db_name}")
+def stream_backup(db_name: str):
+    script = _BACKUP_SCRIPTS.get(db_name)
+    if not script:
+        from fastapi.responses import StreamingResponse as _SR
+        def _err():
+            yield f"data: [ERROR] Unknown database: '{db_name}'\n\n"
+            yield "data: __done__\n\n"
+        return _SR(_err(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+    logger.info("Streaming: backup {}", db_name)
+    return _stream_script(["bash", str(script)])
+
+
+@app.post("/api/stream/restore/{db_name}")
+def stream_restore(db_name: str, file: str):
+    script = _RESTORE_SCRIPTS.get(db_name)
+    if not script:
+        from fastapi.responses import StreamingResponse as _SR
+        def _err():
+            yield f"data: [ERROR] Unknown database: '{db_name}'\n\n"
+            yield "data: __done__\n\n"
+        return _SR(_err(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+    backup_file = str(BACKUPS_ROOT / db_name / file)
+    logger.info("Streaming: restore {} from {}", db_name, backup_file)
+    return _stream_script(["bash", str(script), backup_file])
+
+
+# ── Cloud sync ────────────────────────────────────────────────────────────────
+
+def _rclone_available() -> bool:
+    return subprocess.run(["which", "rclone"], capture_output=True).returncode == 0
+
+
+def _rclone_remote_configured() -> bool:
+    try:
+        r = subprocess.run(["rclone", "listremotes"], capture_output=True, text=True, timeout=5)
+        return "gdrive:" in r.stdout
+    except Exception:
+        return False
+
+
+RCLONE_PORT     = 5572
+RCLONE_PID_FILE = Path("/tmp/rclone-ui.pid")
+
+
+def _rclone_ui_running() -> bool:
+    try:
+        pid = int(RCLONE_PID_FILE.read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+@app.get("/api/cloud/status")
+def cloud_status():
+    installed  = _rclone_available()
+    configured = _rclone_remote_configured() if installed else False
+    return {
+        "rclone_installed": installed,
+        "gdrive_configured": configured,
+        "rclone_ui_running": _rclone_ui_running(),
+    }
+
+
+@app.post("/api/stream/cloud/ui/start")
+def stream_rclone_ui_start():
+    logger.info("Starting rclone web UI")
+    def generate():
+        try:
+            proc = subprocess.Popen(
+                ["rclone", "rcd", "--rc-web-gui",
+                 f"--rc-addr=0.0.0.0:{RCLONE_PORT}",
+                 "--rc-no-auth"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            )
+            RCLONE_PID_FILE.write_text(str(proc.pid))
+            yield f"data: [INFO] rclone web UI started (pid {proc.pid}) on port {RCLONE_PORT}\n\n"
+            yield f"data: [INFO] Open: http://localhost:{RCLONE_PORT}\n\n"
+        except Exception as e:
+            yield f"data: [ERROR] {e}\n\n"
+        yield "data: __done__\n\n"
+    from fastapi.responses import StreamingResponse as _SR
+    return _SR(generate(), media_type="text/event-stream",
+               headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/stream/cloud/ui/stop")
+def stream_rclone_ui_stop():
+    logger.info("Stopping rclone web UI")
+    def generate():
+        try:
+            pid = int(RCLONE_PID_FILE.read_text().strip())
+            os.kill(pid, 15)
+            RCLONE_PID_FILE.unlink(missing_ok=True)
+            yield "data: [INFO] rclone web UI stopped.\n\n"
+        except Exception as e:
+            yield f"data: [ERROR] {e}\n\n"
+        yield "data: __done__\n\n"
+    from fastapi.responses import StreamingResponse as _SR
+    return _SR(generate(), media_type="text/event-stream",
+               headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ── AI task endpoint (called by docker-manager-agent HTTP connector) ───────────

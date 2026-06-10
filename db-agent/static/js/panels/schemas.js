@@ -28,8 +28,14 @@ class SchemasPanel {
     card.className = 'schema-card fade-in';
 
     const statusCls  = s.initialized === true ? 'yes' : s.initialized === false ? 'no' : 'unknown';
-    const statusText = s.initialized === true ? '● Initialized' : s.initialized === false ? '○ Not initialized' : '? Unknown (PostgreSQL offline)';
-    const initDis    = !s.script_exists ? 'disabled title="Script not found"' : '';
+    const statusText = s.initialized === true
+      ? '● Initialized'
+      : s.initialized === false
+        ? '○ Not initialized'
+        : '? Unknown (PostgreSQL offline)';
+
+    const initDis  = !s.script_exists ? 'disabled title="Script not found"' : '';
+    const cleanDis = s.initialized !== true ? 'disabled title="Database not initialized"' : '';
 
     card.innerHTML = `
       <div class="schema-card-inner">
@@ -47,6 +53,10 @@ class SchemasPanel {
               onclick="window._app.schemas.initSchema('${esc(s.name)}','${esc(s.label)}',this)">
               ⚙ Initialize
             </button>
+            <button class="btn btn-danger btn-sm" ${cleanDis}
+              onclick="window._app.schemas.cleanSchema('${esc(s.name)}','${esc(s.label)}',this)">
+              🗑 Clean
+            </button>
             <button class="btn btn-ghost btn-sm"
               onclick="window._app.schemas.load()">
               ↺ Refresh
@@ -58,9 +68,26 @@ class SchemasPanel {
   }
 
   async initSchema(name, label, btn) {
-    const ok = await this._log.run(`/api/stream/initdb/${name}`, `Init ${label}`, btn);
-    // Reload cards to reflect new status
-    await this.load();
+    const ok = await this._log.run(`/api/stream/initdb/${name}`, `Initialize ${label}`, btn);
+    if (ok) await this.load();
+  }
+
+  async cleanSchema(name, label, btn) {
+    const confirmed = confirm(
+      `⚠ Clean "${label}"?\n\nThis will DROP the database and its user.\nALL DATA WILL BE LOST and nothing will be recreated.\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+    const ok = await this._log.run(`/api/stream/cleandb/${name}`, `Clean ${label}`, btn);
+    if (ok) await this.load();
+  }
+
+  async cleanAll(btn) {
+    const confirmed = confirm(
+      `⚠ Clean ALL databases?\n\nThis will DROP all databases and all users.\nALL DATA WILL BE LOST and nothing will be recreated.\n\nThis cannot be undone.`
+    );
+    if (!confirmed) return;
+    const ok = await this._log.run('/api/stream/cleandb/all', 'Clean All Databases', btn);
+    if (ok) await this.load();
   }
 }
 

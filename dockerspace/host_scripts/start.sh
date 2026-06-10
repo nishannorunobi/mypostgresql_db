@@ -44,14 +44,19 @@ if docker container inspect "$CONTAINER_NAME" &>/dev/null; then
 else
     echo "Creating container $CONTAINER_NAME..."
     mkdir -p "$PGDATA_DIR"
+    mkdir -p "$WORKSPACE_ROOT/mountspace/backups"
+    mkdir -p "$HOME/.config/rclone"
     docker run -d \
         --name "$CONTAINER_NAME" \
         --hostname "$CONTAINER_NAME" \
         --network "$SHARED_NETWORK" \
         -v "$PROJECT_ROOT":"$CONTAINER_WORKDIR" \
         -v "$PGDATA_DIR":/var/lib/postgresql/data \
+        -v "$WORKSPACE_ROOT/mountspace/backups":/backups \
+        -v "$HOME/.config/rclone":/root/.config/rclone \
         -p 8085:8085 \
         -p 8890:8890 \
+        -p 5572:5572 \
         "$FULL_IMAGE" \
         tail -f /dev/null
 fi

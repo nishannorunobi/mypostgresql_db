@@ -33,6 +33,12 @@ echo ""
 # ── 1. Start PostgreSQL ───────────────────────────────────────────────────────
 PGDATA="${PGDATA:-/var/lib/postgresql/data}"
 
+# Fix ownership in case pgdata was restored from a zip/backup with a different UID
+if [ -d "$PGDATA" ] && [ "$(stat -c '%u' "$PGDATA")" != "$(id -u postgres)" ]; then
+    info "Fixing PGDATA ownership (restored from backup?)..."
+    chown -R postgres:postgres "$PGDATA"
+fi
+
 # Initialize cluster if it has never been set up
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
     info "Initializing PostgreSQL cluster at $PGDATA..."

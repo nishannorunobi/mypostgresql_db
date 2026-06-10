@@ -8,6 +8,8 @@
 .btn-secondary{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
 .btn-secondary:hover:not(:disabled){background:var(--bg4)}
 .btn-ghost{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px}
+.btn-danger{background:none;border:1px solid var(--red);color:var(--red)}
+.btn-danger:hover:not(:disabled){background:var(--red-dim)}
 .btn-ghost:hover:not(:disabled){background:var(--bg3);color:var(--text)}
 .btn-sm{padding:5px 11px;font-size:11px}
 .btn-group{display:flex;flex-wrap:wrap;gap:8px}
@@ -60,3 +62,31 @@
 .issues{display:flex;flex-direction:column;gap:5px;margin-top:8px}
 .issue-item{display:flex;align-items:flex-start;gap:6px;background:var(--red-dim);border:1px solid rgba(248,81,73,.25);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);line-height:1.4}
 .no-issues{font-size:12px;color:var(--green);display:flex;align-items:center;gap:6px}
+
+/* ── Backup cards ── */
+.backup-grid{display:flex;flex-direction:column;gap:16px}
+.backup-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.backup-card-head{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border2)}
+.backup-card-icon{font-size:20px}
+.backup-card-title{font-size:14px;font-weight:700;color:var(--text)}
+.backup-card-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.backup-card-body{padding:14px 20px}
+.backup-actions{display:flex;gap:8px;margin-bottom:12px}
+.backup-files-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px}
+.backup-files{display:flex;flex-direction:column;gap:5px}
+.backup-file-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px}
+.backup-file-name{font-size:11px;font-family:var(--mono);color:var(--text2)}
+.backup-no-files{font-size:12px;color:var(--text3);font-style:italic}
+.btn-backup{background:var(--purple);color:#0d1117}
+.btn-upload{background:var(--blue);color:#0d1117}
+.btn-download{background:var(--orange);color:#0d1117}
+
+/* ── Cloud sync cards ── */
+.cloud-setup-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px}
+.cloud-status-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cloud-status-text{font-size:13px;color:var(--text2)}
+.cloud-hint{font-size:11px;color:var(--yellow);background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.2);border-radius:6px;padding:8px 12px;margin-top:10px;line-height:1.6}
+.cloud-hint code{font-family:var(--mono);color:var(--text)}
+.cloud-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px}
+.cloud-actions-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px}
+.cloud-actions-row{display:flex;flex-wrap:wrap;gap:8px}

@@ -49,6 +49,13 @@
         <span class="nav-icon">🌐</span><span class="nav-label">Browser</span>
       </button>
       <div class="nav-divider"></div>
+      <button class="nav-item" data-section="backup"    onclick="window._app.switchSection('backup')">
+        <span class="nav-icon">💾</span><span class="nav-label">Backup</span>
+      </button>
+      <button class="nav-item" data-section="cloud"     onclick="window._app.switchSection('cloud')">
+        <span class="nav-icon">☁</span><span class="nav-label">Cloud</span>
+      </button>
+      <div class="nav-divider"></div>
       <button class="nav-item" data-section="chat"      onclick="window._app.switchSection('chat')">
         <span class="nav-icon">💬</span><span class="nav-label">AI Chat</span>
       </button>
@@ -102,7 +109,12 @@
       <div class="section-panel section" data-section="schemas" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div class="section-title" style="margin-bottom:0">Database Schemas</div>
-          <button class="btn btn-secondary btn-sm" onclick="window._app.schemas.load()">↺ Reload</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-danger btn-sm"
+              onclick="window._app.schemas.cleanAll(this)">🗑 Clean All</button>
+            <button class="btn btn-secondary btn-sm"
+              onclick="window._app.schemas.load()">↺ Reload</button>
+          </div>
         </div>
         <p style="font-size:12px;color:var(--text3);margin-bottom:18px;line-height:1.5">
           Each card represents a database schema in this PostgreSQL instance.
@@ -149,6 +161,123 @@
           <div class="field-row">
             <span class="field-key">PID file</span>
             <span class="field-val plain" style="font-family:var(--mono);font-size:11px">/tmp/pgweb.pid</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup section -->
+      <div class="section-panel section" data-section="backup" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="section-title" style="margin-bottom:0">Database Backups</div>
+          <button class="btn btn-secondary btn-sm" onclick="window._app.backup.load()">↺ Reload</button>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:18px;line-height:1.5">
+          Backups are saved as gzip-compressed SQL files in <code style="font-family:var(--mono);color:var(--blue)">mountspace/backups/</code> on the host.
+        </p>
+        <div class="backup-grid">
+
+          <!-- UMS -->
+          <div class="backup-card">
+            <div class="backup-card-head">
+              <span class="backup-card-icon">👤</span>
+              <div>
+                <div class="backup-card-title">UMS Database</div>
+                <div class="backup-card-sub">umsdb — users, roles, permissions</div>
+              </div>
+            </div>
+            <div class="backup-card-body">
+              <div class="backup-actions">
+                <button class="btn btn-backup" onclick="window._app.backup.backup('ums',this)">💾 Backup Now</button>
+              </div>
+              <div class="backup-files-label">Recent Backups</div>
+              <div class="backup-files" id="backup-files-ums">
+                <span class="backup-no-files">Loading…</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Docs -->
+          <div class="backup-card">
+            <div class="backup-card-head">
+              <span class="backup-card-icon">📚</span>
+              <div>
+                <div class="backup-card-title">Docs Database</div>
+                <div class="backup-card-sub">mydocsdb — Plane documentation data</div>
+              </div>
+            </div>
+            <div class="backup-card-body">
+              <div class="backup-actions">
+                <button class="btn btn-backup" onclick="window._app.backup.backup('mydocs',this)">💾 Backup Now</button>
+              </div>
+              <div class="backup-files-label">Recent Backups</div>
+              <div class="backup-files" id="backup-files-mydocs">
+                <span class="backup-no-files">Loading…</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Whole DB -->
+          <div class="backup-card">
+            <div class="backup-card-head">
+              <span class="backup-card-icon">🗄</span>
+              <div>
+                <div class="backup-card-title">Whole Database</div>
+                <div class="backup-card-sub">All databases + roles via pg_dumpall</div>
+              </div>
+            </div>
+            <div class="backup-card-body">
+              <div class="backup-actions">
+                <button class="btn btn-backup" onclick="window._app.backup.backup('wholedb',this)">💾 Backup All</button>
+              </div>
+              <div class="backup-files-label">Recent Backups</div>
+              <div class="backup-files" id="backup-files-wholedb">
+                <span class="backup-no-files">Loading…</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Cloud section -->
+      <div class="section-panel section" data-section="cloud" style="display:none">
+        <div class="section-title">rclone — Google Drive</div>
+
+        <div class="browser-card">
+          <div class="browser-status-row">
+            <div class="server-status-badge unknown" id="rclone-status-badge">● CHECKING…</div>
+            <span class="browser-url">http://localhost:5572</span>
+          </div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5">
+            rclone web UI lets you browse, upload, and download files between your local backups
+            and Google Drive. Once started, open it in your browser.
+          </p>
+          <div class="btn-group">
+            <button class="btn btn-start" id="rclone-start-btn"
+              onclick="window._app.cloud.start(this)">▶ Start rclone UI</button>
+            <button class="btn btn-stop" id="rclone-stop-btn"
+              onclick="window._app.cloud.stop(this)">■ Stop rclone UI</button>
+            <a href="http://localhost:5572" target="_blank" class="btn btn-ghost">↗ Open rclone UI</a>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px">About rclone</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="field-row">
+            <span class="field-key">UI Port</span>
+            <span class="field-val plain">5572</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Remote</span>
+            <span class="field-val plain" style="font-family:var(--mono);font-size:11px">gdrive:myworkspace-backups/</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Local backups</span>
+            <span class="field-val plain" style="font-family:var(--mono);font-size:11px">mountspace/backups/</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Setup script</span>
+            <span class="field-val plain" style="font-family:var(--mono);font-size:11px">db-agent/sync_cloud_backup_db/config_rclone.sh</span>
           </div>
         </div>
       </div>
@@ -206,6 +335,8 @@
 <script src="/static/js/panels/server.js"></script>
 <script src="/static/js/panels/schemas.js"></script>
 <script src="/static/js/panels/browser.js"></script>
+<script src="/static/js/panels/backup.js"></script>
+<script src="/static/js/panels/cloud.js"></script>
 <script src="/static/js/panels/chat.js"></script>
 <script src="/static/js/app.js"></script>
 </body>

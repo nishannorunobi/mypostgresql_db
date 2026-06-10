@@ -1,0 +1,13 @@
+
+# PostgreSQL data directory
+pgdata/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Agent secrets and runtime state
+db-agent/agent.conf
+db-agent/memory/

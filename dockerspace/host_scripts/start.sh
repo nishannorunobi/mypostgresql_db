@@ -7,8 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKERSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$DOCKERSPACE_DIR/.." && pwd)"
 WORKSPACE_ROOT="$(cd "$PROJECT_ROOT/../.." && pwd)"
-#PGDATA_DIR="$WORKSPACE_ROOT/mountspace/pgdata"
-PGDATA_DIR="/home/nishan/myworkspace/mountspace/pgdata"
+PGDATA_DIR="$WORKSPACE_ROOT/mountspace/pgdata"
+#PGDATA_DIR="/home/nishan/myworkspace/mountspace/pgdata"
 
 
 source "$DOCKERSPACE_DIR/project.conf"

@@ -55,7 +55,23 @@ logger.add(
     colorize=True,
 )
 
+# ── Mirror log file ───────────────────────────────────────────────────────────
 AGENT_DIR = Path(__file__).parent
+_script_rel = "db-agent/server_py.log"
+_log_mirror_root = os.environ.get("LOG_MIRROR_ROOT", "")
+if _log_mirror_root:
+    _mirror_log = Path(_log_mirror_root) / _script_rel
+else:
+    _mirror_log = AGENT_DIR / "memory" / "server.log"
+_mirror_log.parent.mkdir(parents=True, exist_ok=True)
+logger.add(
+    str(_mirror_log),
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {name}:{line} — {message}",
+    level="INFO",
+    rotation="50 MB",
+    retention=10,
+    colorize=False,
+)
 load_dotenv(AGENT_DIR / "agent.conf")
 
 sys.path.insert(0, str(AGENT_DIR))

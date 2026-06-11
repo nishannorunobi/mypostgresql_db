@@ -3,6 +3,14 @@
 # Run on the HOST from anywhere.
 set -euo pipefail
 
+# ── Mirror logging ─────────────────────────────────────────────────────────────
+_WS_ROOT="$(d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; while [ ! -d "$d/mountspace" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done; echo "$d")"
+if [ -f "$_WS_ROOT/init/create_logging_path.sh" ]; then
+    source "$_WS_ROOT/init/create_logging_path.sh"
+    setup_logging
+fi
+# ──────────────────────────────────────────────────────────────────────────────
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKERSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$DOCKERSPACE_DIR/.." && pwd)"
@@ -47,6 +55,7 @@ else
     echo "Creating container $CONTAINER_NAME..."
     mkdir -p "$PGDATA_DIR"
     mkdir -p "$WORKSPACE_ROOT/mountspace/backups"
+    mkdir -p "$WORKSPACE_ROOT/mountspace/logs"
     mkdir -p "$HOME/.config/rclone"
     docker run -d \
         --name "$CONTAINER_NAME" \
@@ -55,7 +64,10 @@ else
         -v "$PROJECT_ROOT":"$CONTAINER_WORKDIR" \
         -v "$PGDATA_DIR":/var/lib/postgresql/data \
         -v "$WORKSPACE_ROOT/mountspace/backups":/backups \
+        -v "$WORKSPACE_ROOT/mountspace/logs":/mountspace/logs \
         -v "$HOME/.config/rclone":/root/.config/rclone \
+        -e CONTAINER_WORKDIR="$CONTAINER_WORKDIR" \
+        -e LOG_MIRROR_ROOT="/mountspace/logs/myworkspace/projectspace/$PROJECT_NAME" \
         -p 8085:8085 \
         -p 8890:8890 \
         -p 5572:5572 \

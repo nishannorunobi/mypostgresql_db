@@ -48,7 +48,9 @@ success "Dependencies installed."
 # ── Install rclone if missing ─────────────────────────────────────────────────
 if ! command -v rclone &>/dev/null; then
     info "Installing rclone..."
-    apt-get install -y -qq curl
+    # curl downloads the installer; unzip is needed to extract the rclone archive.
+    apt-get update -qq
+    apt-get install -y -qq curl unzip
     curl -fsSL https://rclone.org/install.sh | bash
     success "rclone installed: $(rclone --version | head -1)"
 else

@@ -80,6 +80,7 @@ from tools import TOOL_DEFINITIONS, execute_tool, MEMORY_DIR
 
 STARTDB          = AGENT_DIR.parent / "umsdb"    / "scripts" / "startdb.sh"
 MYDOCSDB_STARTDB = AGENT_DIR.parent / "mydocsdb" / "scripts" / "startdb.sh"
+MYODOO_STARTDB   = AGENT_DIR.parent / "myodoo"   / "scripts" / "startdb.sh"
 PGDATA           = os.environ.get("PGDATA", "/var/lib/postgresql/data")
 DB_UI_SCRIPT     = AGENT_DIR.parent / "dockerspace" / "container_scripts" / "db_ui.sh"
 PGWEB_PID_FILE   = "/tmp/pgweb.pid"
@@ -91,10 +92,12 @@ GDRIVE_REMOTE    = "gdrive:myworkspace-backups"
 _INITDB_SCRIPTS = {
     "umsdb":    STARTDB,
     "mydocsdb": MYDOCSDB_STARTDB,
+    "myodoo":   MYODOO_STARTDB,
 }
 _CLEANDB_SCRIPTS = {
     "umsdb":    AGENT_DIR.parent / "umsdb"    / "scripts" / "cleandb.sh",
     "mydocsdb": AGENT_DIR.parent / "mydocsdb" / "scripts" / "cleandb.sh",
+    "myodoo":   AGENT_DIR.parent / "myodoo"   / "scripts" / "cleandb.sh",
     "all":      AGENT_DIR.parent / "scripts"  / "cleandb_all.sh",
 }
 
@@ -111,6 +114,12 @@ _SCHEMA_META: dict[str, dict] = {
         "description": "Plane documentation platform — issues, projects, workspace data",
         "icon":        "📚",
         "color":       "#bc8cff",
+    },
+    "myodoo": {
+        "label":       "Odoo Database",
+        "description": "Odoo Community eCommerce — website, products, orders, CRM",
+        "icon":        "🛒",
+        "color":       "#7ed321",
     },
 }
 
@@ -430,11 +439,13 @@ def service_stop(project: str, service: str):
 _BACKUP_SCRIPTS = {
     "ums":     BACKUP_DIR / "backup_ums.sh",
     "mydocs":  BACKUP_DIR / "backup_mydocs.sh",
+    "myodoo":  BACKUP_DIR / "backup_myodoo.sh",
     "wholedb": BACKUP_DIR / "backup_wholedb.sh",
 }
 _RESTORE_SCRIPTS = {
     "ums":     BACKUP_DIR / "restore_ums.sh",
     "mydocs":  BACKUP_DIR / "restore_mydocs.sh",
+    "myodoo":  BACKUP_DIR / "restore_myodoo.sh",
     "wholedb": BACKUP_DIR / "restore_wholedb.sh",
 }
 

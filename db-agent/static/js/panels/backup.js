@@ -2,12 +2,12 @@
 class BackupPanel {
   constructor(log) {
     this._log = log;
-    this._files = { ums: [], mydocs: [], wholedb: [] };
+    this._files = { ums: [], mydocs: [], myodoo: [], wholedb: [] };
   }
 
   async load() {
     await Promise.all(
-      ['ums', 'mydocs', 'wholedb'].map(db => this._loadFiles(db))
+      ['ums', 'mydocs', 'myodoo', 'wholedb'].map(db => this._loadFiles(db))
     );
   }
 
@@ -37,13 +37,13 @@ class BackupPanel {
   }
 
   async backup(db, btn) {
-    const labels = { ums: 'UMS', mydocs: 'Docs', wholedb: 'Whole DB' };
+    const labels = { ums: 'UMS', mydocs: 'Docs', myodoo: 'Odoo', wholedb: 'Whole DB' };
     const ok = await this._log.run(`/api/stream/backup/${db}`, `Backup ${labels[db]}`, btn);
     if (ok) await this._loadFiles(db);
   }
 
   async _restore(db, file, btn) {
-    const labels = { ums: 'UMS', mydocs: 'Docs', wholedb: 'Whole DB' };
+    const labels = { ums: 'UMS', mydocs: 'Docs', myodoo: 'Odoo', wholedb: 'Whole DB' };
     const ok = await this._log.run(
       `/api/stream/restore/${db}?file=${encodeURIComponent(file)}`,
       `Restore ${labels[db]} — ${file}`, btn

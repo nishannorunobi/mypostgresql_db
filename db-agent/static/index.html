@@ -216,6 +216,26 @@
             </div>
           </div>
 
+          <!-- Odoo -->
+          <div class="backup-card">
+            <div class="backup-card-head">
+              <span class="backup-card-icon">🛒</span>
+              <div>
+                <div class="backup-card-title">Odoo Database</div>
+                <div class="backup-card-sub">myodoo — eCommerce website, products, orders</div>
+              </div>
+            </div>
+            <div class="backup-card-body">
+              <div class="backup-actions">
+                <button class="btn btn-backup" onclick="window._app.backup.backup('myodoo',this)">💾 Backup Now</button>
+              </div>
+              <div class="backup-files-label">Recent Backups</div>
+              <div class="backup-files" id="backup-files-myodoo">
+                <span class="backup-no-files">Loading…</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Whole DB -->
           <div class="backup-card">
             <div class="backup-card-head">

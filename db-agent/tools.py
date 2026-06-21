@@ -29,7 +29,7 @@ UMS_PASSWORD = os.environ.get("UMS_PASSWORD", "ums_pass")
 PG_SUPERUSER = os.environ.get("PG_SUPERUSER", "postgres")
 
 # ── Port-forward helper ────────────────────────────────────────────────────────
-_DOCKER_MANAGER_URL = "http://172.19.0.1:8889"  # host gateway on ums-network
+_DOCKER_MANAGER_URL = "http://172.19.0.1:8889"  # host gateway on my_docker_network
 _CONTAINER_NAME     = "mypostgresql_db-container"
 
 # Scripts that start a web service and need a host port exposed
@@ -127,7 +127,7 @@ TOOL_DEFINITIONS = [
     {
         "name": "ping_service",
         "description": (
-            "Check if another container or service is reachable on the ums-network. "
+            "Check if another container or service is reachable on the my_docker_network. "
             "Provide a path (e.g. '/actuator/health') for an HTTP check."
         ),
         "input_schema": {

@@ -11,3 +11,6 @@ __pycache__/
 # Agent secrets and runtime state
 db-agent/agent.conf
 db-agent/memory/
+
+# Never track log files
+*.log

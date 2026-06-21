@@ -19,11 +19,25 @@ cd "$SCRIPT_DIR"
 
 RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BOLD="\033[1m"; RESET="\033[0m"
 
-[ -d ".venv" ]      || { echo -e "${RED}[ERROR]${RESET} .venv not found. Run ./build.sh first."; exit 1; }
-[ -f "agent.conf" ] || { echo -e "${RED}[ERROR]${RESET} agent.conf not found. Run ./build.sh first."; exit 1; }
+# Self-bootstrap: if the environment was cleaned (venv missing/incomplete), build it;
+# otherwise reuse the existing venv.
+if [ ! -d ".venv" ] || ! .venv/bin/python3 -c 'import anthropic' 2>/dev/null; then
+    echo -e "${YELLOW}[INFO]${RESET}  venv missing/incomplete — running build.sh..."
+    bash build.sh
+fi
 
-source agent.conf
-[ -n "${ANTHROPIC_API_KEY:-}" ] || { echo -e "${RED}[ERROR]${RESET} ANTHROPIC_API_KEY not set in agent.conf"; exit 1; }
+# Ensure agent.conf, and inject ANTHROPIC_API_KEY from the container env if provided.
+[ -f agent.conf ] || cp agent.conf.example agent.conf 2>/dev/null || true
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    if grep -q '^ANTHROPIC_API_KEY=' agent.conf 2>/dev/null; then
+        sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}|" agent.conf
+    else
+        echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" >> agent.conf
+    fi
+fi
+source agent.conf 2>/dev/null || true
+# Missing key only disables chat/LLM — never block startup.
+[ -n "${ANTHROPIC_API_KEY:-}" ] || echo -e "${YELLOW}[WARN]${RESET}  ANTHROPIC_API_KEY not set — chat/LLM disabled, agent still starts."
 
 PORT="${PORT:-8890}"
 LOG_FILE="memory/server.log"

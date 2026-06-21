@@ -1,0 +1,46 @@
+# docker-compose.yml — standard lifecycle for the mypostgresql_db container.
+#   Build + start : docker compose up -d --build
+#   Stop + remove : docker compose down
+#   Shell in      : docker compose exec mypostgresql_db bash
+# Run from this dockerspace/ directory.
+
+services:
+  mypostgresql_db:
+    build:
+      context: ..
+      dockerfile: dockerspace/Dockerfile
+      args:
+        BASE_IMAGE: postgres:16
+        CONTAINER_WORKDIR: /mypostgresql_db
+    image: mypostgresql_db-image:1.0
+    container_name: mypostgresql_db-container
+    hostname: mypostgresql_db-container
+    networks:
+      my_docker_network:
+        ipv4_address: 172.28.0.20      # static IP within my_docker_network's subnet
+    ports:
+      - "5572:5572"
+      - "8085:8085"
+      - "8890:8890"                    # 5432 stays internal — reached over the network by name/IP
+    volumes:
+      - ../../../mountspace/pgdata:/var/lib/postgresql/data
+      - ../../../mountspace/backups:/backups
+      - ../../../mountspace/logs:/mountspace/logs
+      - ${HOME}/.config/rclone:/root/.config/rclone
+      - ..:/mypostgresql_db            # source bind-mounted (not baked into image)
+    environment:
+      CONTAINER_WORKDIR: /mypostgresql_db
+      LOG_MIRROR_ROOT: /mountspace/logs/myworkspace/projectspace/mypostgresql_db
+      PGDATA: /var/lib/postgresql/data
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # passed from host env; optional
+    command: >
+      bash -c "
+        bash /mypostgresql_db/db-agent/start.sh;
+        exec tail -f /dev/null
+      "
+    restart: unless-stopped
+
+networks:
+  # Shared network created by myworkspace/dockerspace/docker_network.sh (via docker_up).
+  my_docker_network:
+    external: true

@@ -1,9 +1,0 @@
-[33m[WARN][0m  PostgreSQL is not running — agent will start it on request.
-
-[1m╔══════════════════════════════════════════╗[0m
-[1m║   DB Agent                               ║[0m
-[1m╚══════════════════════════════════════════╝[0m
-  [32mAPI:[0m  http://localhost:8890
-  [32mLog:[0m  memory/server.log
-  Press Ctrl+C to stop.
-
